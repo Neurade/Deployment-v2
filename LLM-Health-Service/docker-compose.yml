@@ -1,0 +1,10 @@
+services:
+  llm-health-service:
+    build:
+      context: .       
+      dockerfile: Dockerfile 
+    image: llm-service:latest
+    container_name: llm-health-service
+    ports:
+      - "7999:8002"
+   

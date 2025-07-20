@@ -1,0 +1,18 @@
+services:
+  pr-core-agent:
+    build:
+      context: .       
+      dockerfile: Dockerfile
+    image: pr-reviewer:latest
+    container_name: pr-core-agent
+    ports:
+      - "7998:8000"
+      - "5678:5678"  # Expose debugpy port
+
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=production
+    restart: unless-stopped
+    # Optional: if you need to load environment variables from .env file
+    env_file:
+      - .env

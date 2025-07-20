@@ -1,0 +1,10 @@
+services:
+  chatbot:
+    build:
+      context: .       
+      dockerfile: Dockerfile 
+    image: chatbot:latest
+    container_name: chatbot
+    ports:
+      - "7997:5000"
+   

@@ -1,0 +1,17 @@
+{
+    "api_key": "",
+    "model": "gemini-2.0-flash",
+    "query": "chưa hiểu lắm, tại sao lại phải đặt tên biến như thế",
+    "file_queried_on": "02-loop.js",
+    "answer_file_path": "src/data/lesson-03.md",
+    "previous_comment": [
+      {
+        "role": "teacher",
+        "message": "Score: 8.5/10 -1.5 điểm: Sử dụng sai quy tắc đặt tên biến (camelCase) cho biến Sum.lalala Positive: Logic chương trình có vẻ đúng và hoạt động như mong đợi. Cấu trúc code rõ ràng và dễ đọc (ngoại trừ vấn đề về tên biến). Areas to Improve: Tuân thủ quy tắc đặt tên biến camelCase. Trong JavaScript, tên biến nên bắt đầu bằng chữ thường và sử dụng chữ hoa cho các từ tiếp theo (ví dụ: sum, totalAmount). Cần sửa lại tên biến Sum thành sum ở các dòng 2, 4 và 6. Overall Comment: Bài nộp của bạn khá tốt và thể hiện sự hiểu biết về vòng lặp. Chỉ cần chú ý hơn đến quy tắc đặt tên biến để code trở nên chuyên nghiệp và dễ đọc hơn. Việc sửa đổi nhỏ này sẽ giúp code của bạn tuân thủ các tiêu chuẩn coding convention phổ biến."
+      },
+      {
+        "role": "student",
+        "message": "adnsaldasda"
+      }
+    ]
+  }

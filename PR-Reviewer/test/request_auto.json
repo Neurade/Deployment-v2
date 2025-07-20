@@ -1,0 +1,15 @@
+{
+  "repo_owner": "Neurade",
+  "repo_name": "repo_test",
+  "pr_description":"homework-1",
+  "pr_number": 5,
+  "answer_file_paths": {
+    "homework_01":"src/data/lesson-03.md",
+    "homework-2":"src/data/lesson-04.md",
+    "homework-3":"src/data/lesson-05.md"
+  },
+  "coding_convention_path": "src/data/coding_convention.md",
+  "model": "gemini-2.0-flash",
+  "api_key": "",
+  "github_token": ""
+}

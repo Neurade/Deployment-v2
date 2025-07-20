@@ -1,0 +1,10 @@
+{
+  "api_key": "",
+  "github_token": "",
+  "repo_owner": "Neurade",
+  "repo_name": "repo_test",
+  "pr_number": 1,
+  "answer_file_path":"./src/data/lesson-03.md",
+  "coding_convention_path":"./src/data/coding_convention.md",
+  "model": "gemini-2.0-flash"
+}
