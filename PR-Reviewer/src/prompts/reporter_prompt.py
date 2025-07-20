@@ -21,6 +21,7 @@ Guidelines:
 
 Output Format (in plain text):
 Score: x.x/10
+<If the submission is none sense or irrelavent to the assignment, give the student below 3>
 <Details how much points are lost with each mistakes. Each mistake is written in one line>
 
 1. Positive:
