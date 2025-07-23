@@ -20,6 +20,14 @@ class ReceptionistAgent:
             structured_llm = llm.with_structured_output(ReceptionistResponse)
             response: ReceptionistResponse = await structured_llm.ainvoke(messages)
 
+            if response.intent == "homework-unrelated":
+                return {
+                    "receptionist_response": response,
+                    "input_tokens": state.input_tokens + llm.get_usage().get("prompt_tokens", 0),
+                    "output_tokens": state.output_tokens + llm.get_usage().get("completion_tokens", 0),
+                    "assistant_response": response.rejection_answer,
+                }
+
             return {
                 "receptionist_response": response,
                 "input_tokens": state.input_tokens + llm.get_usage().get("prompt_tokens", 0),

@@ -64,10 +64,13 @@ async def review_auto(review_request: ReviewAutoRequestSchema):
             review_request.answer_file_paths, review_request.pr_description
         )
         if not answer_file_path:
-            raise HTTPException(
-                status_code=400,
-                detail="No suitable answer file found based on PR description.",
+            response = ReviewResponseSchema(
+                summary="Bạn nhớ thêm **tên bài tập** vào phần mô tả của Pull Request nhé, để mình chấm điểm cho bạn nha! 😊",
+                comments=[],
+                input_tokens=0,
+                output_tokens=0,
             )
+            return JSONResponse(content=response.model_dump())
 
         logging.info(
             f"Running workflow with: {review_request.repo_owner}/{review_request.repo_name} PR #{review_request.pr_number}"
