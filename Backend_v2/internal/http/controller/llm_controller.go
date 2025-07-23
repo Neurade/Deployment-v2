@@ -277,6 +277,16 @@ func (c *LLMController) GetLLM(w http.ResponseWriter, r *http.Request) {
 
 	c.log.Printf("Response from LLM service: isValid=%v, models=%v, error=%s", response.IsValid, response.Models, response.ErrorMessage)
 
+	if !response.IsValid {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":         "Invalid API Key",
+			"error_message": response.ErrorMessage,
+		})
+		return
+	}
+
 	// Return the response with models list
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -284,4 +294,16 @@ func (c *LLMController) GetLLM(w http.ResponseWriter, r *http.Request) {
 		"models":        response.Models,
 		"error_message": response.ErrorMessage,
 	})
+}
+
+// GetAllAdminLLMs returns all LLMs created by admin (super_admin)
+func (c *LLMController) GetAllAdminLLMs(w http.ResponseWriter, r *http.Request) {
+	llms, err := c.LLMService.GetAllByAdmin(r.Context())
+	if err != nil {
+		c.log.Println("Failed to get admin LLMs:", err)
+		http.Error(w, "Failed to get admin LLMs", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(llms)
 }

@@ -30,3 +30,8 @@ func (r *UserRepository) FindUserByEmail(email string) (*entity.User, error) {
 	}
 	return &user, nil
 }
+
+// UpdateGithubToken updates the github_token for a user by ID
+func (r *UserRepository) UpdateGithubToken(userID int, githubToken string) error {
+	return r.DB.Model(&entity.User{}).Where("id = ?", userID).Update("github_token", githubToken).Error
+}

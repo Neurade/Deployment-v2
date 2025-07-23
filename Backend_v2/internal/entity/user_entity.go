@@ -7,8 +7,9 @@ type User struct {
 	Email        string    `gorm:"column:email"`
 	PasswordHash string    `gorm:"column:password_hash"`
 	Role         string    `gorm:"column:role"`
-	Verified     bool      `gorm:"column:verified"`
 	GithubToken  string    `gorm:"column:github_token"`
+	Locked       bool      `gorm:"column:locked"`
+	Deleted      bool      `gorm:"column:deleted"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at"`
 }

@@ -1,20 +1,9 @@
-import { cn } from "@/lib/utils"
+import { Loader2 } from "lucide-react"
 
-interface LoadingSpinnerProps {
-  size?: "sm" | "md" | "lg"
-  className?: string
-}
-
-export function LoadingSpinner({ size = "md", className }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-8 w-8",
-    lg: "h-12 w-12",
-  }
-
+export function LoadingSpinner() {
   return (
-    <div className={cn("flex items-center justify-center", className)}>
-      <div className={cn("animate-spin rounded-full border-2 border-blue-200 border-t-blue-600", sizeClasses[size])} />
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
     </div>
   )
 }

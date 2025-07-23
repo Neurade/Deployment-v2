@@ -132,6 +132,10 @@ func (c *PrController) UpdateResult(w http.ResponseWriter, r *http.Request) {
 
 // Add this new method to allow programmatic posting of reviews
 func (c *PrController) PostReviewToGitHubInternal(ctx context.Context, prID, courseID int, review model.GitHubReviewRequest) error {
+	c.Log.Info("PostReviewToGitHubInternal")
+	c.Log.Info("prID", prID)
+	c.Log.Info("courseID", courseID)
+	c.Log.Info("review", review)
 	pr, err := c.PrService.GetByID(ctx, prID)
 	if err != nil {
 		return fmt.Errorf("PR not found: %w", err)
@@ -145,6 +149,7 @@ func (c *PrController) PostReviewToGitHubInternal(ctx context.Context, prID, cou
 		return fmt.Errorf("User not found: %w", err)
 	}
 	githubToken := user.GithubToken
+	c.Log.Info("githubToken", githubToken)
 	owner, repo, err := util.ParseGitHubURL(course.GithubURL)
 	if err != nil {
 		return fmt.Errorf("Invalid GitHub URL: %w", err)
@@ -198,20 +203,57 @@ func (c *PrController) PostReviewToGitHub(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Invalid course_id", http.StatusBadRequest)
 		return
 	}
-	reviewStr := r.FormValue("review")
-	if reviewStr == "" {
-		http.Error(w, "Missing review", http.StatusBadRequest)
+	// Fetch PR from DB and use its result field
+	pr, err := c.PrService.GetByID(r.Context(), prID)
+	if err != nil {
+		http.Error(w, "PR not found", http.StatusNotFound)
 		return
 	}
-	var review model.GitHubReviewRequest
-	if err := json.Unmarshal([]byte(reviewStr), &review); err != nil {
-		http.Error(w, "Invalid review JSON", http.StatusBadRequest)
+	if pr.Result == "" {
+		http.Error(w, "No result found for PR", http.StatusBadRequest)
 		return
 	}
+	// Parse agent result format
+	type AgentResult struct {
+		Summary  string               `json:"summary"`
+		Comments []model.AgentComment `json:"comments"`
+	}
+	var agentResult AgentResult
+	if err := json.Unmarshal([]byte(pr.Result), &agentResult); err != nil {
+		c.Log.Info("err", err)
+		http.Error(w, "Invalid agent result JSON in PR result", http.StatusBadRequest)
+		return
+	}
+	// Map to GitHubReviewRequest
+	review := model.GitHubReviewRequest{
+		Body:     "📋 Summary:\n\n" + agentResult.Summary,
+		Event:    "COMMENT",
+		Comments: agentResult.Comments,
+	}
+	c.Log.Info("review", review)
 	if err := c.PostReviewToGitHubInternal(r.Context(), prID, courseID, review); err != nil {
 		c.Log.Errorf("Failed to post review to GitHub: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to post review: %v", err), http.StatusInternalServerError)
 		return
+	}
+	// Update PR status to Done
+	pr.StatusGrade = "Done"
+	pr.UpdatedAt = time.Now()
+	_, err = c.PrService.Update(r.Context(), &model.PrCreateRequest{
+		ID:            pr.ID,
+		CourseID:      pr.CourseID,
+		AssignmentID:  pr.AssignmentID,
+		PrName:        pr.PrName,
+		PrDescription: pr.PrDescription,
+		Status:        pr.Status,
+		PrNumber:      pr.PrNumber,
+		Result:        pr.Result,
+		StatusGrade:   pr.StatusGrade,
+		CreatedAt:     pr.CreatedAt,
+		UpdatedAt:     pr.UpdatedAt,
+	})
+	if err != nil {
+		c.Log.Errorf("Failed to update PR status to Done: %v", err)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"success":true}`))
@@ -219,8 +261,9 @@ func (c *PrController) PostReviewToGitHub(w http.ResponseWriter, r *http.Request
 
 func postReview(owner, repo string, prNumber int, token string, review *model.GitHubReviewRequest) error {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d/reviews", owner, repo, prNumber)
-	fmt.Println(apiURL)
+	// fmt.Println(apiURL)
 	reviewData, err := json.Marshal(review)
+	// fmt.Println("reviewData", string(reviewData))
 	if err != nil {
 		return fmt.Errorf("error marshaling review: %w", err)
 	}

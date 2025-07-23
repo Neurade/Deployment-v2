@@ -4,6 +4,7 @@ import (
 	"be/neurade/v2/internal/model"
 	"be/neurade/v2/internal/service"
 	"be/neurade/v2/internal/util"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -143,4 +144,75 @@ func (c *UserController) UpdateGithubToken(w http.ResponseWriter, r *http.Reques
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedUser)
+}
+
+// Add stubs for super admin user management
+func (c *UserController) Create(w http.ResponseWriter, r *http.Request)       {}
+func (c *UserController) Lock(w http.ResponseWriter, r *http.Request)         {}
+func (c *UserController) Delete(w http.ResponseWriter, r *http.Request)       {}
+func (c *UserController) AssignCourse(w http.ResponseWriter, r *http.Request) {}
+
+// Add AdminConfig endpoint for first-time super admin setup
+func (c *UserController) AdminConfig(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(4 << 20); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+	oldEmail := "admin@gmail.com"
+	oldPassword := "admin123"
+	newEmail := r.FormValue("email")
+	newPassword := r.FormValue("password")
+	if oldEmail != "admin@gmail.com" || oldPassword != "admin123" {
+		http.Error(w, "Invalid initial admin credentials", http.StatusUnauthorized)
+		return
+	}
+	if newEmail == "" || newPassword == "" {
+		http.Error(w, "New email and password required", http.StatusBadRequest)
+		return
+	}
+	// Find the admin user
+	user, err := c.getUserByEmail(r.Context(), oldEmail)
+	if err != nil {
+		http.Error(w, "Admin user not found", http.StatusNotFound)
+		return
+	}
+	hashed, _ := util.HashPassword(newPassword)
+	updateReq := &model.UserUpdateRequest{
+		ID:           user.ID,
+		Email:        newEmail,
+		PasswordHash: hashed,
+		Role:         "super_admin",
+	}
+	_, err = c.UserService.Update(r.Context(), updateReq)
+	if err != nil {
+		http.Error(w, "Failed to update admin info", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Super admin setup complete. You can now login."))
+}
+
+// Handler to get all users (admin only)
+func (c *UserController) GetAll(w http.ResponseWriter, r *http.Request) {
+	users, err := c.UserService.GetAllUsers(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+// Replace c.UserService.GetByEmail with a helper that finds user by email
+func (c *UserController) getUserByEmail(ctx context.Context, email string) (*model.UserResponse, error) {
+	users, err := c.UserService.GetAllUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
 }

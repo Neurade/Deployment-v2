@@ -53,27 +53,31 @@ func (c *GitHubWebhookController) FetchPullRequests(w http.ResponseWriter, r *ht
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
-	userIDStr := r.FormValue("user_id")
 	courseIDStr := r.FormValue("course_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
 	courseID, err := strconv.Atoi(courseIDStr)
 	if err != nil {
 		http.Error(w, "Invalid course ID", http.StatusBadRequest)
 		return
 	}
-	user, err := c.userService.GetByID(r.Context(), userID)
+
+	// Always use super_admin github_token
+	users, err := c.userService.GetAllUsers(r.Context())
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return
 	}
-	if user.GithubToken == "" {
-		http.Error(w, "GitHub token not found for user", http.StatusBadRequest)
+	var githubToken string
+	for _, user := range users {
+		if user.Role == "super_admin" && user.GithubToken != "" {
+			githubToken = user.GithubToken
+			break
+		}
+	}
+	if githubToken == "" {
+		http.Error(w, "Super admin github_token not found", http.StatusBadRequest)
 		return
 	}
+
 	course, err := c.courseService.GetByID(r.Context(), courseID)
 	if err != nil {
 		http.Error(w, "Course not found", http.StatusNotFound)
@@ -83,8 +87,9 @@ func (c *GitHubWebhookController) FetchPullRequests(w http.ResponseWriter, r *ht
 		http.Error(w, "GitHub URL not found for course", http.StatusBadRequest)
 		return
 	}
-
-	pullRequests, err := c.githubService.GetPullRequests(r.Context(), course.GithubURL, user.GithubToken)
+	c.log.Info("githubToken", githubToken)
+	c.log.Info("course.GithubURL", course.GithubURL)
+	pullRequests, err := c.githubService.GetPullRequests(r.Context(), course.GithubURL, githubToken)
 	if err != nil {
 		c.log.Errorf("Failed to fetch pull requests: %v", err)
 		http.Error(w, "Failed to fetch pull requests from GitHub", http.StatusInternalServerError)
@@ -110,6 +115,8 @@ func (c *GitHubWebhookController) FetchPullRequests(w http.ResponseWriter, r *ht
 		if err == nil && existingPr != nil {
 			// Update existing PR (do not create duplicate)
 			prRequest.ID = existingPr.ID // ensure update targets the correct PR
+			prRequest.StatusGrade = existingPr.StatusGrade
+			prRequest.Result = existingPr.Result
 			_, err = c.prService.Update(r.Context(), prRequest)
 			if err != nil {
 				c.log.Errorf("Failed to update PR %d: %v", pr.Number, err)
@@ -189,27 +196,31 @@ func (c *GitHubWebhookController) GetPullRequestsByCourse(w http.ResponseWriter,
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
-	userIDStr := r.FormValue("user_id")
 	courseIDStr := r.FormValue("course_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
-	}
 	courseID, err := strconv.Atoi(courseIDStr)
 	if err != nil {
 		http.Error(w, "Invalid course ID", http.StatusBadRequest)
 		return
 	}
-	user, err := c.userService.GetByID(r.Context(), userID)
+
+	// Always use super_admin github_token
+	users, err := c.userService.GetAllUsers(r.Context())
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return
 	}
-	if user.GithubToken == "" {
-		http.Error(w, "GitHub token not found for user", http.StatusBadRequest)
+	var githubToken string
+	for _, user := range users {
+		if user.Role == "super_admin" && user.GithubToken != "" {
+			githubToken = user.GithubToken
+			break
+		}
+	}
+	if githubToken == "" {
+		http.Error(w, "Super admin github_token not found", http.StatusBadRequest)
 		return
 	}
+
 	course, err := c.courseService.GetByID(r.Context(), courseID)
 	if err != nil {
 		http.Error(w, "Course not found", http.StatusNotFound)
@@ -219,7 +230,8 @@ func (c *GitHubWebhookController) GetPullRequestsByCourse(w http.ResponseWriter,
 		http.Error(w, "GitHub URL not found for course", http.StatusBadRequest)
 		return
 	}
-	pullRequests, err := c.githubService.GetPullRequests(r.Context(), course.GithubURL, user.GithubToken)
+	c.log.Info("githubToken", githubToken)
+	pullRequests, err := c.githubService.GetPullRequests(r.Context(), course.GithubURL, githubToken)
 	if err != nil {
 		c.log.Errorf("Failed to fetch pull requests: %v", err)
 		http.Error(w, "Failed to fetch pull requests", http.StatusInternalServerError)

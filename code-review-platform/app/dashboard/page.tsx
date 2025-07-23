@@ -2,39 +2,51 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/features/auth/hooks/useAuth"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { DashboardContent } from "@/components/dashboard/dashboard-content"
+import { useAuth } from "@/hooks/use-auth"
+import { Sidebar } from "@/components/layout/sidebar"
+import { CourseList } from "@/components/courses/course-list"
+import { useCourses } from "@/hooks/use-courses"
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log("userId:", user.id);
+    }
+  }, [authLoading, user]);
+  const userId = user?.id ?? 0
+  const { courses, loading: coursesLoading } = useCourses(userId)
+  console.log(coursesLoading);
+
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push(`/${user.id}/course`)
-    } else if (!loading && !user) {
+    if (!loading && !isAuthenticated) {
       router.push("/login")
     }
-  }, [user, loading, router])
+  }, [isAuthenticated, loading, router])
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  // This will only render if user exists but we're still on /dashboard
-  // In practice, the useEffect above should redirect before this renders
-  if (user) {
-    return (
-      <DashboardLayout>
-        <DashboardContent />
-      </DashboardLayout>
-    )
+  if (!isAuthenticated) {
+    return null
   }
 
-  return null
-} 
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto px-6 py-8">
+          <CourseList />
+        </div>
+      </main>
+    </div>
+  )
+}

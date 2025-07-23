@@ -1,10 +1,11 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    email TEXT NOT NULL,
-    password_hash TEXT NOT NULL UNIQUE,
-    role TEXT NOT NULL DEFAULT 'none',
-    verified BOOLEAN NOT NULL DEFAULT FALSE,
-    github_token TEXT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user', 
+    github_token TEXT, -- 'super_admin' or 'user'
+    locked BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -71,6 +72,17 @@ CREATE TABLE IF NOT EXISTS chats (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- CREATE TABLE IF NOT EXISTS courses (
+-- PERMISSION_USER_COURSE TABLE: which users can manage which courses
+CREATE TABLE IF NOT EXISTS permission_user_courses (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bootstrap admin user
+INSERT INTO users (email, password_hash, role, locked, deleted)
+SELECT 'admin@gmail.com', '$2a$10$wH8QwQnQnQnQnQnQnQnQnOQnQnQnQnQnQnQnQnQnQnQnQnQnQn', 'super_admin', FALSE, FALSE
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@gmail.com');
 
 

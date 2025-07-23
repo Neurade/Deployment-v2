@@ -136,3 +136,34 @@ func (s *LLMService) Delete(ctx context.Context, id int) error {
 
 	return nil
 }
+
+// GetAllByAdmin returns all LLMs created by users with role 'super_admin'
+func (s *LLMService) GetAllByAdmin(ctx context.Context) ([]*model.LLMResponse, error) {
+	// Find all users with role 'super_admin'
+	var adminUsers []entity.User
+	err := s.DB.WithContext(ctx).Where("role = ?", "super_admin").Find(&adminUsers).Error
+	if err != nil {
+		s.Log.WithContext(ctx).WithError(err).Error("failed to get admin users")
+		return nil, err
+	}
+	if len(adminUsers) == 0 {
+		return []*model.LLMResponse{}, nil
+	}
+	// Collect admin user IDs
+	adminIDs := make([]int, 0, len(adminUsers))
+	for _, u := range adminUsers {
+		adminIDs = append(adminIDs, u.ID)
+	}
+	// Find all LLMs with user_id in adminIDs
+	llms := make([]entity.LLM, 0)
+	err = s.DB.WithContext(ctx).Where("user_id IN ?", adminIDs).Find(&llms).Error
+	if err != nil {
+		s.Log.WithContext(ctx).WithError(err).Error("failed to get LLMs by admin")
+		return nil, err
+	}
+	llmResponses := make([]*model.LLMResponse, 0, len(llms))
+	for i := range llms {
+		llmResponses = append(llmResponses, converter.LLMToResponse(&llms[i]))
+	}
+	return llmResponses, nil
+}

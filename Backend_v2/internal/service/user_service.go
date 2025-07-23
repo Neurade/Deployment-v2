@@ -49,9 +49,7 @@ func (s *UserService) Update(ctx context.Context, request *model.UserUpdateReque
 	if request.GithubToken != "" {
 		updateFields["github_token"] = request.GithubToken
 	}
-	if request.Verified {
-		updateFields["verified"] = request.Verified
-	}
+
 	if len(updateFields) == 0 {
 		return converter.UserToResponse(user), nil // nothing to update
 	}
@@ -89,7 +87,6 @@ func (s *UserService) Register(ctx context.Context, request *model.UserCreateReq
 		Email:        request.Email,
 		PasswordHash: string(hashedPassword),
 		Role:         request.Role,
-		Verified:     false,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}

@@ -40,24 +40,30 @@ func Bootstrap(config *BootstrapConfig) *chi.Mux {
 
 	userController := controller.NewUserController(userService, config.Log, config.Config.JWTSecret)
 	llmController := controller.NewLLMController(llmService, config.Log, config.Agent.LLMServiceEnpoint)
-	courseController := controller.NewCourseController(courseService, userService, config.Log, config.Minio)
-	assignmentController := controller.NewAssignmentController(assignmentService, config.Log, config.Minio)
+	permissionUserCourseRepo := repository.NewPermissionUserCourseRepository()
+	permissionUserCourseService := service.NewPermissionUserCourseService(config.DB, permissionUserCourseRepo)
 	prController := controller.NewPrController(prService, courseService, userService, config.Log)
 	minioUtil := util.NewMinioUtil(config.Minio, config.Log)
 	agentController := controller.NewAgentController(courseService, prService, githubService, minioUtil, config.Log, config.Agent.ReviewEnpoint, userService, llmService, assignmentService, prController)
 	githubWebhookController := controller.NewGitHubWebhookController(githubService, prService, courseService, userService, chatService, llmService, assignmentService, minioUtil, config.Log, config.Agent.ChatEnpoint, agentController)
+	courseController := controller.NewCourseController(courseService, userService, config.Log, config.Minio, userController.JWTUtil, permissionUserCourseService, githubWebhookController)
+	assignmentController := controller.NewAssignmentController(assignmentService, config.Log, config.Minio, agentController)
 	chatController := controller.NewChatController(chatService, config.Log)
 
+	adminUserController := controller.NewAdminUserController(userService, permissionUserCourseService)
+
 	r := route.RouteConfig{
-		App:                     chi.NewRouter(),
-		UserController:          userController,
-		LLMController:           llmController,
-		CourseController:        courseController,
-		AssignmentController:    assignmentController,
-		PrController:            prController,
-		GitHubWebhookController: githubWebhookController,
-		AgentController:         agentController,
-		ChatController:          chatController,
+		App:                         chi.NewRouter(),
+		UserController:              userController,
+		LLMController:               llmController,
+		CourseController:            courseController,
+		AssignmentController:        assignmentController,
+		PrController:                prController,
+		GitHubWebhookController:     githubWebhookController,
+		AgentController:             agentController,
+		ChatController:              chatController,
+		AdminUserController:         adminUserController,
+		PermissionUserCourseService: permissionUserCourseService,
 	}
 
 	return r.Setup()

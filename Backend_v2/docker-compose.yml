@@ -29,28 +29,64 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET}
     volumes:
       - minio_data:/data
-      
+  pr-core-agent:
 
-  backend:
-    build:
-      context: .       
-      dockerfile: Dockerfile 
-    image: neurade-be:latest
+    image: trucxinhlunglinh/neurade_ai:2.0
+    container_name: pr-core-agent
+    ports:
+      - "7998:8000"
+      - "5678:5678"  # Expose debugpy port
 
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=production
+    restart: unless-stopped
+    # Optional: if you need to load environment variables from .env file
     env_file:
       - .env
-    environment:
-      - WEB_PORT=${WEB_PORT:-8080}
-      - WEB_HOST=0.0.0.0
-      # Add other env vars as needed
-    ports:
-      - "${WEB_PORT:-8080}:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-      minio:
-        condition: service_started
+      
 
+  # backend:
+  #   image: trucxinhlunglinh/neurade-be:2.0
+
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - WEB_PORT=${WEB_PORT:-8080}
+  #     - WEB_HOST=0.0.0.0
+  #     # Add other env vars as needed
+  #   ports:
+  #     - "${WEB_PORT:-8080}:8080"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
+
+  # fe:
+  #   image: trucxinhlunglinh/nerade-fe:2.0
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://be:8080
+  #   depends_on:
+  #     - be
+
+  # be:
+  #   image: trucxinhlunglinh/neurade-be:2.0
+  #   ports:
+  #     - "8080:8080"
+  #   env_file:
+  #     - .env 
+  #   environment:
+  #     # Add any required BE env vars here
+  #     - WEB_PORT=8080
+  #     - WEB_HOST=0.0.0.0
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
 
 volumes:
   postgres_data:

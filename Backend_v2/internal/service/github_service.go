@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -28,8 +29,8 @@ func (s *GitHubService) GetPullRequests(ctx context.Context, githubURL string, g
 	if err != nil {
 		s.Log.Errorf("Cannot parse github url: %v", err)
 	}
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls?state=all", owner, repo)
-
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls", owner, repo)
+	s.Log.Info("apiURL", apiURL)
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
@@ -37,12 +38,12 @@ func (s *GitHubService) GetPullRequests(ctx context.Context, githubURL string, g
 	}
 
 	// Set headers
-	req.Header.Set("Authorization", "token "+githubToken)
+	req.Header.Set("Authorization", "Bearer "+githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "Neurade-Backend")
 
-	// Make request
-	client := &http.Client{}
+	// In GetPullRequests, set client timeout to 5 minutes
+	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)

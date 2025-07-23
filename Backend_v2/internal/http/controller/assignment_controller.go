@@ -5,8 +5,10 @@ import (
 	"be/neurade/v2/internal/model/converter"
 	"be/neurade/v2/internal/service"
 	"be/neurade/v2/internal/util"
+	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
@@ -20,11 +22,16 @@ type AssignmentController struct {
 	AssignmentService *service.AssignmentService
 	Log               *logrus.Logger
 	MinioUtil         *util.MinioUtil
+	AgentController   *AgentController // Added AgentController field
 }
 
-func NewAssignmentController(assignmentService *service.AssignmentService, log *logrus.Logger, minioClient *minio.Client) *AssignmentController {
-	return &AssignmentController{AssignmentService: assignmentService, Log: log,
-		MinioUtil: util.NewMinioUtil(minioClient, log)}
+func NewAssignmentController(assignmentService *service.AssignmentService, log *logrus.Logger, minioClient *minio.Client, agentController *AgentController) *AssignmentController {
+	return &AssignmentController{
+		AssignmentService: assignmentService,
+		Log:               log,
+		MinioUtil:         util.NewMinioUtil(minioClient, log),
+		AgentController:   agentController,
+	}
 }
 
 func (c *AssignmentController) Create(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +43,7 @@ func (c *AssignmentController) Create(w http.ResponseWriter, r *http.Request) {
 
 	assignment := converter.RequestToAssignmentRequest(r)
 	var assignmentContent string
-	assignmentFile, fileHeader, err := r.FormFile("assignment_file")
+	assignmentFile, fileHeader, err := r.FormFile("file")
 	if err == nil {
 		defer assignmentFile.Close()
 		c.Log.Infof("Upload file: %s, size: %d bytes", fileHeader.Filename, fileHeader.Size)
@@ -52,12 +59,35 @@ func (c *AssignmentController) Create(w http.ResponseWriter, r *http.Request) {
 	course, _ := c.AssignmentService.GetCourseByID(r.Context(), assignment.CourseID)
 	assignmentURL, _ := c.MinioUtil.SaveFile(r.Context(), course.CourseName, course.CreatedAt, "assignment", assignment.AssignmentName, assignmentContent)
 	assignment.AssignmentURL = assignmentURL
+	// fmt.Println("assignmentURL")
+	// fmt.Println(assignmentURL)
+	// fmt.Println("assignment content")
+	// fmt.Println(assignmentContent)
 	assignmentResponse, err := c.AssignmentService.Create(r.Context(), assignment)
 	if err != nil {
 		c.Log.Println("Failed to create assignment:", err)
-		http.Error(w, "Failed to create assignment:", http.StatusInternalServerError)
+		http.Error(w, "Failed to create assignment", http.StatusInternalServerError)
 		return
 	}
+
+	// Auto trigger agent review if course has auto_grade
+	course, err = c.AssignmentService.GetCourseByID(r.Context(), assignment.CourseID)
+	if err == nil && course.AutoGrade && c.AgentController != nil {
+		go func(courseID int) {
+			form := &bytes.Buffer{}
+			writer := multipart.NewWriter(form)
+			_ = writer.WriteField("course_id", strconv.Itoa(courseID))
+			// You may want to select a default LLM for the course or super admin
+			llmID := "1" // TODO: select appropriate LLM ID
+			_ = writer.WriteField("llm_id", llmID)
+			writer.Close()
+			dummyReq, _ := http.NewRequest("POST", "", form)
+			dummyReq.Header.Set("Content-Type", writer.FormDataContentType())
+			wDummy := &util.DummyResponseWriter{}
+			c.AgentController.ReviewPRAuto(wDummy, dummyReq)
+		}(assignment.CourseID)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(assignmentResponse)
@@ -66,7 +96,11 @@ func (c *AssignmentController) Create(w http.ResponseWriter, r *http.Request) {
 func (c *AssignmentController) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "assignment_id"))
 	assignmentResponse, err := c.AssignmentService.GetByID(r.Context(), id)
+	// c.Log.Println("assignmentResponse URL")
+	// c.Log.Println(assignmentResponse.AssignmentURL)
 	assignmentPres, _ := c.MinioUtil.GetFile(r.Context(), assignmentResponse.AssignmentURL)
+	// c.Log.Println("assignmentPres URL")
+	// c.Log.Println(assignmentPres)
 	assignmentResponse.AssignmentURL = assignmentPres
 	if err != nil {
 		c.Log.Println("Failed to get assignment by ID")

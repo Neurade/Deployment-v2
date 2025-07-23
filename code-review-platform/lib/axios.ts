@@ -1,47 +1,18 @@
-import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosResponse } from "axios"
+import axios from "axios"
 
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://103.237.147.55:8085/"
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT 
-
-// Create axios instance with default configuration
-const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    "Content-Type": "multipart/form-data",
-  },
+const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
+  timeout: 100000,
+  
 })
 
-// Request interceptor to add auth token and handle form-data
+// Request interceptor to add auth token
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth-token")
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
+  (config) => {
+    const token = localStorage.getItem("auth-token")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-    
-    // Handle form-data conversion
-    if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
-      const formData = new FormData()
-      
-      Object.keys(config.data).forEach(key => {
-        const value = config.data[key]
-        if (value !== null && value !== undefined) {
-          if (value instanceof File) {
-            formData.append(key, value)
-          } else if (typeof value === 'object') {
-            formData.append(key, JSON.stringify(value))
-          } else {
-            formData.append(key, String(value))
-          }
-        }
-      })
-      
-      config.data = formData
-    }
-    
     return config
   },
   (error) => {
@@ -49,18 +20,32 @@ apiClient.interceptors.request.use(
   },
 )
 
-// Response interceptor for error handling
+// Response interceptor to handle errors
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth-token")
-        localStorage.removeItem("user")
-        window.location.href = "/login"
+      localStorage.removeItem("auth-token")
+      localStorage.removeItem("user")
+      window.location.href = "/login"
+    } else if (error.response?.status === 403) {
+      // Only show alert for unexpected 403 errors, not for expected permission checks
+      const url = error.config?.url || ""
+      
+      // Don't show alert for these expected permission-related endpoints
+      const expectedPermissionEndpoints = [
+        '/users', // User management endpoints
+        '/courses/permission', // Course permission endpoints
+        '/courses-permission', // Course permission updates
+        '/assign-user', // User assignment endpoints
+      ]
+      
+      const isExpectedPermissionError = expectedPermissionEndpoints.some(endpoint => 
+        url.includes(endpoint)
+      )
+      
+      if (!isExpectedPermissionError) {
+        console.warn("Access denied:", error.response?.data || "You don't have permission to access this resource")
       }
     }
     return Promise.reject(error)

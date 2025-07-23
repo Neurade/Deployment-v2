@@ -10,7 +10,6 @@ func UserToResponse(user *entity.User) *model.UserResponse {
 		ID:          user.ID,
 		Email:       user.Email,
 		Role:        user.Role,
-		Verified:    user.Verified,
 		GithubToken: user.GithubToken,
 		CreatedAt:   user.CreatedAt,
 		UpdatedAt:   user.UpdatedAt,

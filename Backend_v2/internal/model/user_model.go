@@ -6,16 +6,19 @@ type UserResponse struct {
 	ID          int       `json:"id"`
 	Email       string    `json:"email"`
 	Role        string    `json:"role"`
-	Verified    bool      `json:"verified"`
 	GithubToken string    `json:"github_token,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Locked      bool      `json:"locked"`
+	Deleted     bool      `json:"deleted"`
 }
 
 type UserCreateRequest struct {
 	Email        string `json:"email" validate:"required,email"`
 	PasswordHash string `json:"password" validate:"required,min=8"`
 	Role         string `json:"role" validate:"required,oneof=none teacher admin"`
+	Locked       bool   `json:"locked"`
+	Deleted      bool   `json:"deleted"`
 }
 
 type UserUpdateRequest struct {
@@ -24,7 +27,8 @@ type UserUpdateRequest struct {
 	PasswordHash string `json:"password" validate:"omitempty,min=8"`
 	Role         string `json:"role" validate:"omitempty,oneof=none teacher admin"`
 	GithubToken  string `json:"github_token" validate:"omitempty"`
-	Verified     bool   `json:"verified" validate:"omitempty"`
+	Locked       bool   `json:"locked"`
+	Deleted      bool   `json:"deleted"`
 }
 
 type LoginRequest struct {

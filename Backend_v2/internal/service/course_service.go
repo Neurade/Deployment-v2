@@ -92,12 +92,14 @@ func (s *CourseService) Update(ctx context.Context, request *model.CourseUpdateR
 
 	course := &entity.Course{
 		ID:            request.ID,
+		UserID:        request.UserID, // FIX: include UserID
 		CourseName:    request.CourseName,
 		GithubURL:     request.GithubURL,
 		Owner:         request.Owner,
 		RepoName:      request.RepoName,
 		GeneralAnswer: request.GeneralAnswer,
 		AutoGrade:     request.AutoGrade,
+		CreatedAt:     request.CreatedAt, // FIX: include CreatedAt
 		UpdatedAt:     request.UpdatedAt,
 	}
 
@@ -134,4 +136,14 @@ func (s *CourseService) Delete(ctx context.Context, id int) error {
 	}
 
 	return nil
+}
+
+// GetPermissionCoursesByUser returns all permission_user_course records for a user
+func (s *CourseService) GetPermissionCoursesByUser(ctx context.Context, userID int) ([]*entity.PermissionUserCourse, error) {
+	var pucs []*entity.PermissionUserCourse
+	err := s.DB.WithContext(ctx).Where("user_id = ?", userID).Find(&pucs).Error
+	if err != nil {
+		return nil, err
+	}
+	return pucs, nil
 }

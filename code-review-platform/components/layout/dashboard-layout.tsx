@@ -1,34 +1,22 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname, useParams } from "next/navigation"
-import { Button } from "@/components/ui/Button"
+import { usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { LayoutDashboard, User, Menu, X, LogOut, BookOpen } from "lucide-react"
-import { useAuth } from "@/features/auth/hooks/useAuth"
+import { LayoutDashboard, User, Menu, X, LogOut } from "lucide-react"
 
 const navigation = [
-  { name: "Courses", href: "/course", icon: BookOpen },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Profile", href: "/profile", icon: User },
 ]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
-  const params = useParams()
-  const { user, logout } = useAuth()
-  const userId = params.userID as string
-
-  const handleLogout = async () => {
-    await logout()
-  }
-
-  const navigationWithUserId = navigation.map(item => ({
-    ...item,
-    href: `/${userId}${item.href}`
-  }))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -43,7 +31,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-2">
-            {navigationWithUserId.map((item) => {
+            {navigation.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
@@ -61,11 +49,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="border-t p-4">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={handleLogout}
-            >
+            <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
               <LogOut className="mr-3 h-5 w-5" />
               Sign Out
             </Button>
@@ -80,7 +64,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <span className="text-xl font-bold text-gray-900">CodeReview</span>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-2">
-            {navigationWithUserId.map((item) => {
+            {navigation.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
@@ -97,11 +81,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="border-t p-4">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={handleLogout}
-            >
+            <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
               <LogOut className="mr-3 h-5 w-5" />
               Sign Out
             </Button>
@@ -112,7 +92,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        {/* <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
@@ -121,19 +101,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="flex flex-1" />
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <Avatar className="h-8 w-8">
-                <AvatarFallback>
-                  {user?.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
-                </AvatarFallback>
+                <AvatarFallback>JD</AvatarFallback>
               </Avatar>
             </div>
           </div>
-        </div> */}
+        </div>
 
         {/* Page content */}
-        <main className="py-3">
+        <main className="py-8">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
         </main>
       </div>
     </div>
   )
-} 
+}

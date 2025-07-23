@@ -52,17 +52,15 @@ func (c *AgentController) ReviewPRV2(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
-	userIDStr := r.FormValue("user_id")
+	// userIDStr := r.FormValue("user_id") // IGNORE user_id
 	courseIDStr := r.FormValue("course_id")
 	llmIDStr := r.FormValue("llm_id")
 	assignmentIDStr := r.FormValue("assignment_id")
 	prIDsStr := r.FormValue("pr_ids") // comma-separated string
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
-		return
-	}
+	c.Log.Info("courseIDStr", courseIDStr)
+	c.Log.Info("llmIDStr", llmIDStr)
+	c.Log.Info("assignmentIDStr", assignmentIDStr)
+	c.Log.Info("prIDsStr", prIDsStr)
 	courseID, err := strconv.Atoi(courseIDStr)
 	if err != nil {
 		http.Error(w, "Invalid course_id", http.StatusBadRequest)
@@ -93,9 +91,21 @@ func (c *AgentController) ReviewPRV2(w http.ResponseWriter, r *http.Request) {
 			prIDs = append(prIDs, id)
 		}
 	}
-	user, err := c.UserService.GetByID(r.Context(), userID)
+	// Always use super_admin github_token
+	users, err := c.UserService.GetAllUsers(r.Context())
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		return
+	}
+	var githubToken string
+	for _, user := range users {
+		if user.Role == "super_admin" && user.GithubToken != "" {
+			githubToken = user.GithubToken
+			break
+		}
+	}
+	if githubToken == "" {
+		http.Error(w, "Super admin github_token not found", http.StatusBadRequest)
 		return
 	}
 	llm, err := c.LLMService.GetByID(r.Context(), llmID)
@@ -142,7 +152,7 @@ func (c *AgentController) ReviewPRV2(w http.ResponseWriter, r *http.Request) {
 		}
 		prNumber := pr.PrNumber
 		agentRequest := map[string]interface{}{
-			"github_token":           user.GithubToken,
+			"github_token":           githubToken,
 			"api_key":                llm.ModelToken,
 			"query":                  "bạn thấy PR này thế nào? Hãy review kĩ và thật cẩn thận nhé. Đưa ra gợi ý chi tiết nếu cần",
 			"repo_owner":             owner,
@@ -200,15 +210,17 @@ func (c *AgentController) ReviewPRV2(w http.ResponseWriter, r *http.Request) {
 
 // callAgentAPIFormData posts JSON to the agent endpoint and parses the response
 func callAgentAPIFormData(endpoint string, req map[string]interface{}) (*model.AgentResponse, error) {
-	client := &http.Client{Timeout: 60 * time.Second}
+	client := &http.Client{Timeout: 600 * time.Second}
 	jsonBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("req", req)
 	resp, err := client.Post(endpoint+"/api/review", "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("resp", resp.Body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("agent API returned status %d", resp.StatusCode)
@@ -229,17 +241,11 @@ func (c *AgentController) ReviewPRAuto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIDStr := r.FormValue("user_id")
+	// userIDStr := r.FormValue("user_id") // IGNORE user_id
 	courseIDStr := r.FormValue("course_id")
 	llmIDStr := r.FormValue("llm_id")
-	c.Log.Info(userIDStr)
 	c.Log.Info(courseIDStr)
 	c.Log.Info(llmIDStr)
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
-		return
-	}
 	courseID, err := strconv.Atoi(courseIDStr)
 	if err != nil {
 		http.Error(w, "Invalid course_id", http.StatusBadRequest)
@@ -251,10 +257,21 @@ func (c *AgentController) ReviewPRAuto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user, LLM, and course
-	user, err := c.UserService.GetByID(r.Context(), userID)
+	// Always use super_admin github_token
+	users, err := c.UserService.GetAllUsers(r.Context())
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		return
+	}
+	var githubToken string
+	for _, user := range users {
+		if user.Role == "super_admin" && user.GithubToken != "" {
+			githubToken = user.GithubToken
+			break
+		}
+	}
+	if githubToken == "" {
+		http.Error(w, "Super admin github_token not found", http.StatusBadRequest)
 		return
 	}
 	llm, err := c.LLMService.GetByID(r.Context(), llmID)
@@ -329,7 +346,7 @@ func (c *AgentController) ReviewPRAuto(w http.ResponseWriter, r *http.Request) {
 
 		// Call the agent API for auto-review
 		agentRequest := map[string]interface{}{
-			"github_token":           user.GithubToken,
+			"github_token":           githubToken,
 			"api_key":                llm.ModelToken,
 			"repo_owner":             owner,
 			"repo_name":              repo,
@@ -339,7 +356,7 @@ func (c *AgentController) ReviewPRAuto(w http.ResponseWriter, r *http.Request) {
 			"coding_convention_path": codingConventionPath,
 			"model":                  llm.ModelID,
 		}
-		c.Log.Infof("Calling agent API for PR #%d with request: %+v", pr.PrNumber, agentRequest)
+		// c.Log.Infof("Calling agent API for PR #%d with request: %+v", pr.PrNumber, agentRequest)
 
 		agentResp, err := callAgentAPIAutoReview(c.AgentEndpoint, agentRequest)
 		if err != nil {
