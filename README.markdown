@@ -53,8 +53,8 @@ MINIO_SECRET=minioadmin
 Từ thư mục `Deployment/`, chạy script sau để khởi động tất cả các dịch vụ:
 
 ```bash
-chmod +x run_all_compose.sh
-./run_all_compose.sh
+chmod +x deploy.sh
+./deploy.sh
 ```
 
 Script này sẽ:
@@ -70,6 +70,6 @@ Script này sẽ:
 Để dừng và gỡ toàn bộ container, chạy:
 
 ```bash
-chmod +x stop_all_compose.sh
-./stop_all_compose.sh
+chmod +x stop.sh
+./deploy.sh
 ```
